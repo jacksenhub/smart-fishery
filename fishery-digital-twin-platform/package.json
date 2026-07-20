@@ -1,0 +1,29 @@
+{
+  "name": "fishery-digital-twin-platform",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,blue \"npm run dev -w apps/backend\" \"npm run dev -w apps/frontend\"",
+    "dev:backend": "npm run dev -w apps/backend",
+    "dev:frontend": "npm run dev -w apps/frontend",
+    "build": "npm run build -w packages/shared && npm run build -w apps/backend && npm run build -w apps/frontend",
+    "typecheck": "npm run build -w packages/shared && npm run typecheck -w apps/backend && npm run typecheck -w apps/frontend",
+    "start": "concurrently -n api,web -c cyan,blue \"npm run start -w apps/backend\" \"npm run start -w apps/frontend\"",
+    "clean": "powershell -ExecutionPolicy Bypass -File scripts/clean-project.ps1"
+  },
+  "overrides": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "dependencies": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

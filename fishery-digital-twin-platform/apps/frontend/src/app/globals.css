@@ -1,0 +1,233 @@
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #f6f8fb;
+  color: #172033;
+  font-family:
+    Inter,
+    "SF Pro Display",
+    "Segoe UI",
+    "Microsoft YaHei",
+    system-ui,
+    sans-serif;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  letter-spacing: 0;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #eef3f7;
+}
+
+.ocean-map.leaflet-container {
+  background:
+    radial-gradient(circle at 22% 20%, rgba(255, 255, 255, 0.72), transparent 24%),
+    radial-gradient(circle at 78% 72%, rgba(255, 255, 255, 0.38), transparent 28%),
+    repeating-linear-gradient(155deg, rgba(15, 127, 138, 0.1) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(25deg, rgba(15, 127, 138, 0.07) 0 1px, transparent 1px 58px),
+    linear-gradient(135deg, #edfaff 0%, #d8f1f9 46%, #c6e8f4 100%);
+}
+
+.ocean-map.leaflet-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-radial-gradient(ellipse at 30% 40%, rgba(255, 255, 255, 0.28) 0 1px, transparent 1px 18px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+  opacity: 0.42;
+  z-index: 350;
+}
+
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: #667085 !important;
+}
+
+.soft-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.soft-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c9d4df;
+}
+
+.range-soft {
+  accent-color: #0f7f8a;
+}
+
+.servo-range {
+  height: 6px;
+  cursor: pointer;
+  appearance: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #06b6d4, #22d3ee 52%, #334155 52%, #334155);
+  accent-color: #06b6d4;
+}
+
+.servo-range::-webkit-slider-thumb {
+  width: 18px;
+  height: 18px;
+  appearance: none;
+  border: 2px solid #e2e8f0;
+  border-radius: 999px;
+  background: #06b6d4;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.58);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.servo-range:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.78);
+}
+
+.servo-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #334155;
+}
+
+.servo-range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #06b6d4;
+}
+
+.servo-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e2e8f0;
+  border-radius: 999px;
+  background: #06b6d4;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.58);
+}
+
+.servo-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.entry-earth-wrap {
+  position: relative;
+  width: 176px;
+  height: 176px;
+}
+
+.entry-earth {
+  position: absolute;
+  inset: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 127, 138, 0.26);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.12) 31%, transparent 32%),
+    radial-gradient(circle at 58% 62%, rgba(95, 143, 114, 0.28), transparent 28%),
+    linear-gradient(145deg, #dff6fb 0%, #9ed9e4 52%, #4fa8b7 100%);
+  box-shadow:
+    0 24px 70px rgba(15, 127, 138, 0.22),
+    inset 0 0 34px rgba(255, 255, 255, 0.54);
+}
+
+.entry-earth::before,
+.entry-earth::after {
+  position: absolute;
+  content: "";
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+}
+
+.entry-earth::before {
+  inset: 28px -18px;
+}
+
+.entry-earth::after {
+  inset: -18px 38px;
+}
+
+.entry-earth-line {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.entry-earth-line-a {
+  top: 42%;
+}
+
+.entry-earth-line-b {
+  top: 58%;
+}
+
+.entry-earth-glow {
+  position: absolute;
+  inset: -32px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.24), transparent 62%);
+}
+
+.entry-boat-orbit {
+  position: absolute;
+  inset: 0;
+  animation: entry-orbit 1.45s linear infinite;
+  transform-origin: center;
+}
+
+.entry-boat {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(15, 127, 138, 0.28);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #0f7f8a;
+  box-shadow: 0 16px 34px rgba(15, 127, 138, 0.18);
+  transform: translateX(-50%) rotate(90deg);
+}
+
+@keyframes entry-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

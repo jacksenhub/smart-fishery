@@ -1,0 +1,14 @@
+node_modules/
+.next/
+apps/**/.next/
+.next_stale_*/
+apps/**/.next_stale_*/
+dist/
+apps/**/dist/
+packages/**/dist/
+build/
+.npm-cache/
+.env
+.env.local
+npm-debug.log*
+*.tsbuildinfo
