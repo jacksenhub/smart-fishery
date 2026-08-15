@@ -1,0 +1,18 @@
+# YOLO26 鱼类与水面垃圾检测数据配置
+# 将整理后的图片和标签放在 ./datasets/fish-trash 下。
+path: ./datasets/fish-trash
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: fish
+  1: plastic_bottle
+  2: plastic_bag
+  3: can
+  4: foam
+  5: fishing_net
+  6: branch
+  7: aquatic_plant
+  8: other_trash
+  9: person

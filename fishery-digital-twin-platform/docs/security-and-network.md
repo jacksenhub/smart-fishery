@@ -1,85 +1,54 @@
-# 安全与网络配置说明
+# 安全与网络配置
 
-## 为什么固件里会有 WiFi 密码和电脑 IP
+## 本地密钥文件
 
-ESP32 不是运行在电脑上的网页，它需要自己连接 WiFi，再通过 HTTP 访问电脑后端。因此固件里必须知道：
-
-```cpp
-WIFI_SSID
-WIFI_PASSWORD
-SERVER_HOST
-SERVER_BASE
-```
-
-比赛演示时这很正常，但不要公开分享包含这些信息的固件截图或压缩包。
-
-## 如何判断 WiFi 信息是否正确
-
-查看电脑保存的 WiFi：
-
-```powershell
-netsh wlan show profiles
-```
-
-查看指定 WiFi 密码：
-
-```powershell
-netsh wlan show profile name="Xiaomi 17" key=clear
-```
-
-固件里应该对应：
+仓库不再保存 WiFi、API 或设备控制令牌。每个固件目录都提供 `wifi_secrets.example.h`；复制为同目录下的 `wifi_secrets.h` 后填写：
 
 ```cpp
-const char* WIFI_SSID = "Xiaomi 17";
-const char* WIFI_PASSWORD = "这里填 Key Content 对应的密码";
+inline constexpr char WIFI_SSID[] = "你的热点名称";
+inline constexpr char WIFI_PASSWORD[] = "你的热点密码";
+inline constexpr char UISYS_API_TOKEN[] = "一段足够长的随机令牌";
 ```
 
-## 如何判断电脑 IP 是否正确
+`wifi_secrets.h` 和 `.env` 均已被 `.gitignore` 忽略。不要截图、压缩或提交这些文件。若任何密钥曾进入公开仓库，应立即轮换；仅从当前文件中删除不能清除 Git 历史。
 
-查看 IPv4：
+推荐使用 `npm run setup:devices` 同步配置。已有合格令牌时该命令会保留它，避免已烧录设备突然出现 401；只有准备重新烧录全部设备时才使用 `npm run setup:devices:rotate`。
+
+## 后端配置
+
+复制 `apps/backend/.env.example` 为 `apps/backend/.env`，并让以下值与所有固件中的 `UISYS_API_TOKEN` 完全一致：
+
+```text
+UISYS_API_TOKEN=一段足够长的随机令牌
+CORS_ORIGIN=http://localhost:3000,http://127.0.0.1:3000
+```
+
+来自本机回环地址的操作允许直接访问；来自局域网的设备上报、命令轮询和控制请求必须携带 `X-UISYS-Token`。未配置令牌时，后端拒绝局域网控制请求。
+
+## 自动发现与防火墙
+
+电脑和 ESP32 必须位于同一个可信的 2.4GHz 热点或专用路由器，且不能启用客户端隔离。固件通过 UDP 42110 发现后端，电脑向 42111-42114 主动公告；HTTP API 使用 TCP 5000。
+
+查看 WLAN 地址：
 
 ```powershell
 ipconfig | findstr IPv4
 ```
 
-优先选择 WLAN 对应的 IPv4，不要选择虚拟网卡地址，例如：
-
-```text
-192.168.56.1
-```
-
-固件里需要写成：
-
-```cpp
-const char* SERVER_HOST = "电脑 WLAN IPv4";
-const char* SERVER_BASE = "http://电脑 WLAN IPv4:5000";
-```
-
-## 推荐比赛网络
-
-推荐：
-
-- 手机热点。
-- 专用 2.4GHz 路由器。
-- 电脑和 ESP32 都连接同一个网络。
-
-不推荐：
-
-- 公共校园 WiFi。
-- 需要网页认证的 WiFi。
-- 会隔离设备的公共网络。
-
-## 防火墙检查
-
-ESP32 需要访问电脑 `5000` 端口。若无法连接，在管理员 PowerShell 中执行：
+运行以下命令可将当前 WLAN 配置为专用网络并添加两条最小范围规则：
 
 ```powershell
-New-NetFirewallRule -DisplayName "Fishery API 5000" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5000 -Profile Any
+npm run setup:network
 ```
 
-## 密钥保护
+不要在公共校园 WiFi、带网页认证的网络或不受信任的共享热点上运行控制服务。
 
-- DeepSeek 密钥只保存在 `apps/backend/.env`。
-- `.env` 已被 `.gitignore` 忽略，不会被正常 Git 提交。
-- 不要把 `.env` 发给别人。
-- 如果密钥曾经公开过，建议到 DeepSeek 控制台重新生成密钥。
+## 桌面安装版
+
+`setup:devices` 会把不含 WiFi 密码的后端运行配置同步到当前 Windows 用户的 `%APPDATA%\渔博士\backend.env`。桌面安装版运行时从该文件读取设备令牌；令牌不会被打进安装包。换 Windows 用户或换电脑后需要重新运行本地初始化。
+
+若后端和固件已经同步，仅桌面配置缺失，可运行 `npm run setup:desktop`。它只复制当前后端令牌，不读取热点密码，也不会让已烧录开发板失效。
+
+## DeepSeek
+
+DeepSeek 密钥只放在 `apps/backend/.env`。当前默认模型为 `deepseek-v4-flash`，请求有超时和每分钟一次的限流。若密钥曾公开，必须在服务商控制台撤销并重新生成。

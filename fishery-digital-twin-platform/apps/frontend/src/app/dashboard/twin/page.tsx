@@ -1,6 +1,5 @@
-import { TwinPage } from "@/components/dashboard/DashboardPages";
+import { TwinPage } from "@/components/dashboard/TwinPage";
 
 export default function DigitalTwinPage() {
   return <TwinPage />;
 }
-

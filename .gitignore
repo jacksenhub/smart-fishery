@@ -1,0 +1,9 @@
+/.workbuddy/
+/output/
+/tmp/
+/*.pptx
+/*.xlsx
+/*.png
+/*.webp
+/*.svg
+

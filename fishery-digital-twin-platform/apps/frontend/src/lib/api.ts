@@ -1,14 +1,16 @@
 import type { AIReport, PlatformSnapshot, PropulsionMode, PropulsionSnapshot, ServoSnapshot, SystemLog, TwinSimulationInput, TwinSimulationResult } from "@fishery/shared";
-import { createSnapshot } from "./fallback-data";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+const apiToken = process.env.NEXT_PUBLIC_UISYS_API_TOKEN || "";
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
     cache: "no-store",
+    signal: init?.signal ?? AbortSignal.timeout(5000),
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(apiToken ? { "X-UISYS-Token": apiToken } : {}),
       ...(init?.headers || {}),
     },
   });
@@ -22,15 +24,11 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
-  try {
-    return await fetchJson<PlatformSnapshot>("/api/snapshot");
-  } catch {
-    return createSnapshot(Date.now());
-  }
+  return fetchJson<PlatformSnapshot>("/api/snapshot");
 }
 
-export async function generateSimulation(count = 96) {
-  return fetchJson<{ count: number; snapshot: PlatformSnapshot; log: SystemLog }>("/api/simulate", {
+export async function generateDemoSimulation(count = 96) {
+  return fetchJson<{ count: number; snapshot: PlatformSnapshot; log: SystemLog }>("/api/demo/simulate", {
     method: "POST",
     body: JSON.stringify({ count }),
   });
@@ -80,6 +78,8 @@ export async function setPropulsionTarget(payload: {
   emergency_stop: boolean;
   throttle: number;
   steering: number;
+  left_power?: number;
+  right_power?: number;
   max_power: number;
 }) {
   return fetchJson<{ propulsion: PropulsionSnapshot }>("/api/propulsion", {

@@ -1,18 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Battery, Clock3, Compass, FileText, Ship, SlidersHorizontal, Thermometer, Waves } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePlatformData } from "@/hooks/usePlatformData";
+import {
+  HullWireframeIcon,
+  NavigationJournalIcon,
+  PropellerIcon,
+  SurfaceProbeIcon,
+  TimeIcon,
+  VesselStatusIcon,
+  WaypointPathIcon,
+} from "@/components/icons/MaritimeIcons";
 
 const navItems = [
-  { href: "/dashboard/twin", label: "三维孪生", icon: Ship },
-  { href: "/dashboard/water", label: "环境监测", icon: Waves },
-  { href: "/dashboard/servos", label: "水上执行机构", icon: SlidersHorizontal },
-  { href: "/dashboard/navigation", label: "航线规划", icon: Compass },
-  { href: "/dashboard/health", label: "设备健康", icon: Battery },
-  { href: "/dashboard/logs", label: "操作日志", icon: FileText },
+  { href: "/dashboard/twin", label: "三维孪生", icon: HullWireframeIcon },
+  { href: "/dashboard/water", label: "环境监测", icon: SurfaceProbeIcon },
+  { href: "/dashboard/servos", label: "功能操控", icon: PropellerIcon },
+  { href: "/dashboard/navigation", label: "智能航行", icon: WaypointPathIcon },
+  { href: "/dashboard/health", label: "船舶健康", icon: VesselStatusIcon },
+  { href: "/dashboard/logs", label: "日志中心", icon: NavigationJournalIcon },
 ];
 
 export function PlatformShell({ children }: { children: ReactNode }) {
@@ -20,8 +29,7 @@ export function PlatformShell({ children }: { children: ReactNode }) {
   const currentModule = getCurrentModule(pathname);
   const [headerVisible, setHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
-  const { snapshot, updatedAt, loading } = usePlatformData(5000);
-  const latest = snapshot.water.at(-1);
+  const { snapshot, updatedAt, loading, connected } = usePlatformData(5000);
   const displayTime = updatedAt
     ? new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(updatedAt)
     : "--:--:--";
@@ -64,30 +72,33 @@ export function PlatformShell({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-screen bg-app-bg text-ink-900">
       <div className="mx-auto grid min-h-screen w-full max-w-[1680px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="hidden border-r border-app-line bg-white/86 px-5 py-6 lg:block">
+        <aside className="hidden border-r border-app-line bg-[linear-gradient(180deg,#ffffff_0%,#f5faf9_100%)] px-5 py-6 lg:block">
           <Link
             href="/"
             className="mb-9 grid h-12 w-12 place-items-center overflow-hidden rounded-2xl border border-app-line bg-white p-1.5 shadow-sm transition hover:border-harbor-500/40 hover:bg-harbor-50"
             aria-label="返回首页 3D 模型"
             title="返回首页"
           >
-            <img src="/brand-ship-logo.png" alt="返回首页" className="h-full w-full object-contain" />
+            <Image src="/brand-ship-logo.png" alt="返回首页" width={40} height={40} className="h-full w-full object-contain" />
           </Link>
 
-          <nav className="space-y-1.5">
+          <nav className="space-y-1">
             {navItems.map((item) => {
-              const active = pathname === item.href;
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  className={`flex h-14 items-center gap-3.5 rounded-lg px-4 text-sm font-semibold transition-colors ${
                     active
-                      ? "bg-harbor-100 text-harbor-600"
-                      : "text-ink-500 hover:bg-app-subtle hover:text-ink-900"
+                      ? "bg-harbor-100 text-harbor-600 ring-1 ring-inset ring-harbor-500/20"
+                      : "text-slate-500 hover:bg-app-subtle hover:text-slate-800"
                   }`}
+                  aria-current={active ? "page" : undefined}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <span className="grid h-8 w-8 shrink-0 place-items-center text-current">
+                    <item.icon className="h-5 w-5" />
+                  </span>
                   {item.label}
                 </Link>
               );
@@ -102,7 +113,7 @@ export function PlatformShell({ children }: { children: ReactNode }) {
             <div className="flex min-h-[64px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="hidden h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-2xl border border-app-line bg-white p-1.5 md:grid">
-                  <img src="/brand-ship-logo.png" alt="" className="h-full w-full object-contain" />
+                  <Image src="/brand-ship-logo.png" alt="" width={40} height={40} className="h-full w-full object-contain" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -113,32 +124,27 @@ export function PlatformShell({ children }: { children: ReactNode }) {
                 </div>
               </div>
 
-              <div className="hidden items-center gap-6 text-sm 2xl:flex">
-                <TopMetric label="在线船舶" value={snapshot.vessel.online ? "1" : "0"} />
-                <TopMetric label="今日任务" value="3" />
-                <TopMetric label="未处理告警" value="0" />
-              </div>
-
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                <TopStatus icon={Clock3} label="系统时间" value={loading ? "同步中" : displayTime} />
-                <TopStatus icon={Thermometer} label="水温" value={latest ? `${latest.waterTemperature.toFixed(1)}°C` : "--"} />
-                <TopStatus label="同步" value={loading ? "同步中" : "正常"} />
-                <OnlineStatus online={snapshot.vessel.online} />
+                <TopStatus icon={TimeIcon} label="数据时间" value={loading ? "同步中" : connected ? displayTime : "后端断开"} />
+                <OnlineStatus online={connected && snapshot.vessel.online} />
               </div>
             </div>
 
             <nav className="mt-4 flex gap-2 overflow-auto pb-1 lg:hidden">
               {navItems.map((item) => {
-                const active = pathname === item.href;
+                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold ${
+                    className={`inline-flex h-12 shrink-0 items-center gap-2 rounded-lg border px-3 text-xs font-semibold ${
                       active ? "border-harbor-500 bg-harbor-100 text-harbor-600" : "border-app-line bg-white text-ink-500"
                     }`}
+                    aria-current={active ? "page" : undefined}
                   >
-                    <item.icon className="h-3.5 w-3.5" />
+                    <span className="grid h-7 w-7 place-items-center text-current">
+                      <item.icon className="h-5 w-5" />
+                    </span>
                     {item.label}
                   </Link>
                 );
@@ -160,16 +166,7 @@ function getCurrentModule(pathname: string) {
   return item?.label || "数字孪生";
 }
 
-function TopMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="leading-none">
-      <strong className="block text-sm font-semibold text-ink-900">{value}</strong>
-      <span className="mt-1 block text-[11px] font-semibold text-ink-500">{label}</span>
-    </div>
-  );
-}
-
-function TopStatus({ icon: Icon, label, value }: { icon?: typeof Clock3; label: string; value: string }) {
+function TopStatus({ icon: Icon, label, value }: { icon?: typeof TimeIcon; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 border-l border-app-line pl-4 first:border-l-0 first:pl-0">
       {Icon ? <Icon className="h-4 w-4 text-ink-500" /> : null}

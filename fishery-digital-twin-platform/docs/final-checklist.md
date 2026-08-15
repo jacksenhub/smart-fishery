@@ -6,6 +6,8 @@
 - 执行 `npm run dev` 后，前端可打开 `http://localhost:3000`。
 - 后端可访问 `http://localhost:5000/api/health`。
 - 执行 `npm run build` 可以通过。
+- 服务运行后执行 `npm run doctor`，结果没有 failure；离线的非参赛设备可作为已知 warning 记录。
+- 不重复打开第二个 `npm run dev`；启动前自检会阻止 3000、5000、42110 端口冲突。
 
 ## 页面检查
 
@@ -25,9 +27,12 @@
 - 第二块板烧录 `maker_esp32_pro_four_servo_02.ino`。
 - 两块板的 `DEVICE_ID` 分别为 `servo-quad-01` 和 `servo-quad-02`。
 - ESP32 与电脑连接同一个 WiFi。
-- 固件里的 `SERVER_HOST` 和 `SERVER_BASE` 指向电脑当前 WLAN IPv4。
+- 串口出现 `Backend discovered: http://电脑当前IP:5000`。
+- 后端控制台出现 `ESP32 backend discovery listening on udp://0.0.0.0:42110`。
 - Windows 防火墙允许 TCP 5000 入站。
-- 舵机外部供电稳定，不建议只靠 USB 给舵机供电。
+- Windows 防火墙允许 UDP 42110 入站，网络类型为“专用网络”。
+- 舵机使用符合型号额定电压、覆盖堵转电流的独立电源，并与 ESP32 共地；不要用 USB 承担多路舵机电流。
+- 舵机在 90° 和实际工作角度保持稳定，无持续抖动、啸叫、发热或机械顶死。
 - SimpleFOC 推进板第一次测试时不要安装螺旋桨。
 - SimpleFOC 推进板确认参数前保持真实电机输出关闭。
 
@@ -38,6 +43,7 @@
 - 不配置 DeepSeek 密钥时，本地预测报告仍可演示。
 - 比赛现场尽量使用手机热点或专用路由器。
 - 不建议把控制接口暴露在公共校园网或陌生 WiFi 中。
+- 演示当天不要运行 `setup:devices:rotate`；若必须轮换令牌，全部 ESP32 必须重新烧录。
 
 ## 推荐演示顺序
 

@@ -49,6 +49,7 @@ function statusToRisk(status: WaterStatus): AIReport["riskLevel"] {
 function analyzeStats(water: WaterData[], batteries: BatteryData[]): AnalysisStats {
   const safeWater = water.length ? water : [{
     timestamp: new Date().toISOString(),
+    source: "fallback" as const,
     waterTemperature: 24.5,
     turbidity: 28,
     ph: 7.4,
@@ -149,14 +150,17 @@ function normalizeDeepSeekReport(raw: Record<string, unknown>, fallback: AIRepor
     recommendations: pickStringList(raw.recommendations, fallback.recommendations, 8),
     dataQuality: String(raw.dataQuality || raw.data_quality || fallback.dataQuality),
     model,
-    confidence: Number(raw.confidence || fallback.confidence),
+    confidence: (() => {
+      const value = Number(raw.confidence ?? fallback.confidence);
+      return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : fallback.confidence;
+    })(),
   };
 }
 
 export function aiStatus() {
   return {
     configured: Boolean(process.env.DEEPSEEK_API_KEY),
-    model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
   };
 }
 
@@ -168,8 +172,10 @@ export async function generateDecisionReport(water: WaterData[], batteries: Batt
   }
 
   const baseUrl = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
-  const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+  const model = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
   const stats = analyzeStats(water, batteries);
+  const timeoutSeconds = Number(process.env.DEEPSEEK_TIMEOUT_SECONDS || 45);
+  const timeoutMs = Math.max(5_000, Math.min(120_000, Number.isFinite(timeoutSeconds) ? timeoutSeconds * 1000 : 45_000));
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -177,6 +183,7 @@ export async function generateDecisionReport(water: WaterData[], batteries: Batt
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
+    signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify({
       model,
       messages: [

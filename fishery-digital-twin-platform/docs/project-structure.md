@@ -23,7 +23,7 @@ fishery-digital-twin-platform/
 /dashboard              系统总览
 /dashboard/twin         三维孪生
 /dashboard/water        环境监测 + AI 预测报告
-/dashboard/servos       水上执行机构
+/dashboard/servos       功能操控
 /dashboard/navigation   航线规划
 /dashboard/health       设备健康
 /dashboard/logs         操作日志
@@ -114,13 +114,13 @@ packages/shared/src/index.ts
 firmware/esp32/maker_esp32_pro_servo_temp_01
 ```
 
-第一块 MAKER-ESP32-PRO，设备 ID 为 `servo-quad-01`，包含四路舵机和 M0 端口 37GB555 直流电机控制。
+第一块 MAKER-ESP32-PRO，设备 ID 为 `servo-quad-01`，包含三路舵机、GPS、M0 端口 37GB555 正反转电机和 M1 端口伸缩电机控制。
 
 ```text
 firmware/esp32/maker_esp32_pro_four_servo_02
 ```
 
-第二块 MAKER-ESP32-PRO，设备 ID 为 `servo-quad-02`，控制第 5-8 路舵机。
+第二块 MAKER-ESP32-PRO，设备 ID 为 `servo-quad-02`，控制整体编号第 4-7 路舵机及 M0/M1 双推杆。
 
 ```text
 firmware/esp32/esp32_simplefoc_dual_propulsion

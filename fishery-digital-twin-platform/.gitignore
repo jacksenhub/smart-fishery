@@ -1,6 +1,8 @@
 node_modules/
 .next/
 apps/**/.next/
+.next-dev/
+apps/**/.next-dev/
 .next_stale_*/
 apps/**/.next_stale_*/
 dist/
@@ -12,3 +14,8 @@ build/
 .env.local
 npm-debug.log*
 *.tsbuildinfo
+release/
+apps/desktop/runtime/
+data/
+apps/backend/data/
+**/wifi_secrets.h

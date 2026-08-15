@@ -1,9 +1,12 @@
 export type WaterStatus = "normal" | "attention" | "polluted" | "algae-risk";
 export type DeviceStatus = "online" | "warning" | "offline";
 export type MissionStatus = "巡检中" | "返航中" | "待命" | "航线规划中";
+export type DataSource = "sensor" | "demo" | "fallback";
+export type PlatformDataMode = "live" | "mixed" | "demo" | "fallback";
 
 export interface WaterData {
   timestamp: string;
+  source: DataSource;
   waterTemperature: number;
   turbidity: number;
   ph: number;
@@ -18,6 +21,8 @@ export interface BatteryData {
   percentage: number;
   voltage: number;
   status: DeviceStatus;
+  source: DataSource;
+  lastUpdatedAt: string;
 }
 
 export interface NavigationPoint {
@@ -25,6 +30,24 @@ export interface NavigationPoint {
   lng: number;
   label?: string;
   timestamp?: string;
+}
+
+export interface GpsStatus {
+  device_id: string;
+  coordinate_system: "WGS84";
+  serial_online: boolean;
+  valid: boolean;
+  lat: number | null;
+  lng: number | null;
+  satellites: number | null;
+  hdop: number | null;
+  altitude_m: number | null;
+  speed_mps: number | null;
+  heading_deg: number | null;
+  chars_processed: number;
+  last_seen: string | null;
+  last_fix_at: string | null;
+  online: boolean;
 }
 
 export interface NavigationData {
@@ -35,6 +58,8 @@ export interface NavigationData {
   heading: number;
   remainingDistance: number;
   etaMinutes: number;
+  source?: "mock" | "gps";
+  gps?: GpsStatus;
 }
 
 export interface AIReport {
@@ -71,6 +96,8 @@ export interface VesselStatus {
 }
 
 export interface PlatformSnapshot {
+  generatedAt: string;
+  dataMode: PlatformDataMode;
   water: WaterData[];
   batteries: BatteryData[];
   navigation: NavigationData;
@@ -108,6 +135,7 @@ export type PropulsionMode = "MANUAL" | "WEB" | "AUTO";
 export interface PropulsionControl {
   throttle: number;
   steering: number;
+  /** Direct M0/M1 channel targets. For dual actuators these are independent. */
   left_power: number;
   right_power: number;
   max_power: number;
@@ -126,6 +154,16 @@ export interface PropulsionDevice {
   target: PropulsionControl;
   actual_left_power: number;
   actual_right_power: number;
+  runtime_lockout?: boolean;
+  cooldown_remaining_ms?: number;
+  run_active?: boolean;
+  run_remaining_ms?: number;
+  cycle_phase?: "idle" | "first_leg" | "awaiting_return" | "returning" | "cooling";
+  cycle_run_ms?: number;
+  duty_run_ms?: number;
+  duty_remaining_ms?: number;
+  round_trip_count?: number;
+  round_trip_limit?: number;
   last_seen: string | null;
   updated_at: string | null;
   online: boolean;
@@ -147,7 +185,9 @@ export interface PropulsionCommand {
   emergency_stop: boolean;
   throttle: number;
   steering: number;
+  /** M0 output power percentage. */
   left_power: number;
+  /** M1 output power percentage. */
   right_power: number;
   max_power: number;
   created_at: string;
