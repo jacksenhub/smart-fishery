@@ -1,6 +1,5 @@
-import { ServosPage } from "@/components/dashboard/DashboardPages";
+import { ServosPage } from "@/components/dashboard/ServosPage";
 
 export default function ServosPageRoute() {
   return <ServosPage />;
 }
-

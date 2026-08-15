@@ -1,29 +1,95 @@
 {
   "name": "fishery-digital-twin-platform",
+  "productName": "渔博士",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": ">=22.20 <25",
+    "npm": ">=10 <12"
+  },
+  "main": "apps/desktop/main.cjs",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -n api,web -c cyan,blue \"npm run dev -w apps/backend\" \"npm run dev -w apps/frontend\"",
+    "predev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/preflight.ps1 -Mode before-start",
+    "dev": "concurrently --kill-others-on-fail -n api,web -c cyan,blue \"npm run dev -w apps/backend\" \"npm run dev -w apps/frontend\"",
     "dev:backend": "npm run dev -w apps/backend",
     "dev:frontend": "npm run dev -w apps/frontend",
     "build": "npm run build -w packages/shared && npm run build -w apps/backend && npm run build -w apps/frontend",
+    "lint": "npm run lint -w apps/frontend",
+    "test": "npm run test -w apps/backend",
     "typecheck": "npm run build -w packages/shared && npm run typecheck -w apps/backend && npm run typecheck -w apps/frontend",
-    "start": "concurrently -n api,web -c cyan,blue \"npm run start -w apps/backend\" \"npm run start -w apps/frontend\"",
-    "clean": "powershell -ExecutionPolicy Bypass -File scripts/clean-project.ps1"
+    "prestart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/preflight.ps1 -Mode before-start",
+    "start": "concurrently --kill-others-on-fail -n api,web -c cyan,blue \"npm run start -w apps/backend\" \"npm run start -w apps/frontend\"",
+    "doctor": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/preflight.ps1 -Mode runtime",
+    "setup:local": "npm run setup:devices && npm run setup:network",
+    "setup:devices": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/configure-device-secrets.ps1",
+    "setup:devices:rotate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/configure-device-secrets.ps1 -RotateToken",
+    "setup:desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/configure-device-secrets.ps1 -SyncDesktopOnly",
+    "setup:network": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/configure-windows-network.ps1",
+    "firmware:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/firmware-tooling.ps1 -InstallDependencies",
+    "firmware:check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/firmware-tooling.ps1 -CompileAll",
+    "clean": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-project.ps1",
+    "desktop:prepare": "node scripts/prepare-desktop.mjs",
+    "desktop:build": "npm run build && npm run desktop:prepare && electron-builder --win nsis --x64"
   },
   "overrides": {
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "dependencies": {
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.1"
+  },
+  "build": {
+    "appId": "com.yuboshi.fishery",
+    "productName": "渔博士",
+    "asar": true,
+    "asarUnpack": [
+      "apps/desktop/runtime/**/*"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "apps/desktop/assets"
+    },
+    "files": [
+      "apps/desktop/main.cjs",
+      "apps/desktop/assets/**/*",
+      "apps/desktop/runtime/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "apps/desktop/assets/app-icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "渔博士-${version}-安装程序.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "渔博士",
+      "uninstallDisplayName": "渔博士"
+    }
+  },
+  "allowScripts": {
+    "electron@43.3.0": true,
+    "esbuild@0.28.1": true
   }
 }

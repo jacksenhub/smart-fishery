@@ -14,7 +14,10 @@ export type PlatformStoreState = {
   feedbackConnected: boolean;
 };
 
-const SNAPSHOT_INTERVAL = 4000;
+export type PlatformDataSlice = Pick<PlatformStoreState, "snapshot" | "snapshotAt" | "snapshotConnected">;
+export type DeviceFeedbackSlice = Pick<PlatformStoreState, "servos" | "propulsion" | "feedbackAt" | "feedbackConnected">;
+
+const SNAPSHOT_INTERVAL = 2000;
 const FEEDBACK_INTERVAL = 1000;
 
 // Deterministic initial snapshot (no Date.now), shared by server and client
@@ -31,11 +34,35 @@ let state: PlatformStoreState = {
   feedbackConnected: false,
 };
 
+// React uses these immutable snapshots for both the server render and the
+// client's first hydration pass. The live store may already contain newer data
+// after an in-app navigation or Fast Refresh, so it must not be used as the
+// server snapshot.
+const serverPlatformDataSlice: PlatformDataSlice = {
+  snapshot: initialSnapshot,
+  snapshotAt: null,
+  snapshotConnected: false,
+};
+const serverDeviceFeedbackSlice: DeviceFeedbackSlice = {
+  servos: null,
+  propulsion: null,
+  feedbackAt: null,
+  feedbackConnected: false,
+};
+
+// These stable slice objects are replaced only when their own data changes.
+// useSyncExternalStore compares snapshots with Object.is, so a 1-second device
+// feedback update no longer re-renders snapshot-only pages and the shell.
+let platformDataSlice: PlatformDataSlice = serverPlatformDataSlice;
+let deviceFeedbackSlice: DeviceFeedbackSlice = serverDeviceFeedbackSlice;
+
 const listeners = new Set<() => void>();
 let started = false;
 let snapshotTimer: number | null = null;
 let feedbackTimer: number | null = null;
 let refCount = 0;
+let snapshotRefreshPromise: Promise<boolean> | null = null;
+let feedbackRefreshPromise: Promise<void> | null = null;
 
 function emit() {
   for (const listener of listeners) listener();
@@ -43,6 +70,11 @@ function emit() {
 
 function setSnapshot(next: PlatformSnapshot) {
   state = { ...state, snapshot: next, snapshotAt: Date.now(), snapshotConnected: true };
+  platformDataSlice = {
+    snapshot: state.snapshot,
+    snapshotAt: state.snapshotAt,
+    snapshotConnected: state.snapshotConnected,
+  };
   emit();
 }
 
@@ -54,24 +86,47 @@ function setFeedback(servos: ServoSnapshot | null, propulsion: PropulsionSnapsho
     feedbackAt: connected ? Date.now() : state.feedbackAt,
     feedbackConnected: connected,
   };
+  deviceFeedbackSlice = {
+    servos: state.servos,
+    propulsion: state.propulsion,
+    feedbackAt: state.feedbackAt,
+    feedbackConnected: state.feedbackConnected,
+  };
   emit();
 }
 
-async function refreshSnapshot() {
-  try {
-    setSnapshot(await getPlatformSnapshot());
-  } catch {
-    state = { ...state, snapshotConnected: false };
-    emit();
-  }
+function refreshSnapshot() {
+  if (snapshotRefreshPromise) return snapshotRefreshPromise;
+  snapshotRefreshPromise = (async () => {
+    try {
+      setSnapshot(await getPlatformSnapshot());
+      return true;
+    } catch {
+      state = { ...state, snapshotConnected: false };
+      platformDataSlice = { ...platformDataSlice, snapshotConnected: false };
+      emit();
+      return false;
+    }
+  })().finally(() => {
+    snapshotRefreshPromise = null;
+  });
+  return snapshotRefreshPromise;
 }
 
-async function refreshFeedback() {
-  const [servoResult, propulsionResult] = await Promise.allSettled([getServoSnapshot(), getPropulsionSnapshot()]);
-  const connected = servoResult.status === "fulfilled" || propulsionResult.status === "fulfilled";
-  const servos = servoResult.status === "fulfilled" ? servoResult.value : null;
-  const propulsion = propulsionResult.status === "fulfilled" ? propulsionResult.value : null;
-  setFeedback(servos, propulsion, connected);
+function refreshFeedback() {
+  if (feedbackRefreshPromise) return feedbackRefreshPromise;
+
+  feedbackRefreshPromise = (async () => {
+    const [servoResult, propulsionResult] = await Promise.allSettled([getServoSnapshot(), getPropulsionSnapshot()]);
+    const connected = servoResult.status === "fulfilled" || propulsionResult.status === "fulfilled";
+    const servos = servoResult.status === "fulfilled" ? servoResult.value : null;
+    const propulsion = propulsionResult.status === "fulfilled" ? propulsionResult.value : null;
+    setFeedback(servos, propulsion, connected);
+  })().finally(() => {
+    feedbackRefreshPromise = null;
+  });
+
+  return feedbackRefreshPromise;
 }
 
 function start() {
@@ -107,7 +162,34 @@ function getSnapshot() {
   return state;
 }
 
+function getPlatformDataSlice() {
+  return platformDataSlice;
+}
+
+function getServerPlatformDataSlice() {
+  return serverPlatformDataSlice;
+}
+
+function getDeviceFeedbackSlice() {
+  return deviceFeedbackSlice;
+}
+
+function getServerDeviceFeedbackSlice() {
+  return serverDeviceFeedbackSlice;
+}
+
+function applyFeedback(update: { servos?: ServoSnapshot; propulsion?: PropulsionSnapshot }) {
+  setFeedback(update.servos ?? null, update.propulsion ?? null, true);
+}
+
 export const platformStore = {
   subscribe,
   getSnapshot,
+  getPlatformDataSlice,
+  getServerPlatformDataSlice,
+  getDeviceFeedbackSlice,
+  getServerDeviceFeedbackSlice,
+  refreshSnapshot,
+  refreshFeedback,
+  applyFeedback,
 };

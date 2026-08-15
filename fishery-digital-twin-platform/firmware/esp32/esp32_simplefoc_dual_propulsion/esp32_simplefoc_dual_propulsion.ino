@@ -23,14 +23,20 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <WiFiUdp.h>
 #include <Wire.h>
 #include <SimpleFOC.h>
 
-const char* WIFI_SSID = "Xiaomi 17";
-const char* WIFI_PASSWORD = "jzxxiaomi17";
-const char* SERVER_HOST = "10.161.51.97";
-const uint16_t SERVER_PORT = 5000;
-const char* SERVER_BASE = "http://10.161.51.97:5000";
+#if __has_include("wifi_secrets.h")
+#include "wifi_secrets.h"
+#else
+#error "Create wifi_secrets.h from wifi_secrets.example.h before compiling."
+#endif
+const uint16_t BACKEND_DISCOVERY_PORT = 42110;
+const uint16_t BACKEND_DISCOVERY_LOCAL_PORT = 42114;
+const char* BACKEND_DISCOVERY_REQUEST = "UISYS_DISCOVER_V1";
+const char* BACKEND_DISCOVERY_RESPONSE_PREFIX = "UISYS_BACKEND_V1|";
+const unsigned long BACKEND_DISCOVERY_RETRY_INTERVAL_MS = 5000;
 
 const char* DEVICE_ID = "mks-foc-dual-01";
 const char* DEVICE_NAME = "esp32-simplefoc-dual-propulsion-01";
@@ -155,6 +161,14 @@ unsigned long lastCommandReceivedMs = 0;
 unsigned long lastStatusMs = 0;
 unsigned long lastWifiAttemptMs = 0;
 unsigned long lastMotorRampMs = 0;
+unsigned long lastBackendDiscoveryAttemptMs = 0;
+WiFiUDP backendDiscoveryUdp;
+bool wifiPreviouslyConnected = false;
+bool backendDiscoveryUdpStarted = false;
+bool backendDiscovered = false;
+IPAddress backendServerIp;
+uint16_t backendServerPort = 5000;
+String backendServerBase;
 
 struct PropulsionCommand {
   bool valid;
@@ -168,6 +182,10 @@ struct PropulsionCommand {
 
 void connectWiFi();
 void maintainWiFi();
+IPAddress subnetBroadcastAddress();
+void invalidateBackend();
+bool discoverBackend(unsigned long timeoutMs);
+bool ensureBackendDiscovered();
 void testServerConnection();
 void setupMotors();
 void pollCommands();
@@ -320,35 +338,128 @@ void connectWiFi() {
   Serial.println();
 
   if (WiFi.status() == WL_CONNECTED) {
+    wifiPreviouslyConnected = true;
     Serial.print("WiFi connected, ESP32 IP: ");
     Serial.println(WiFi.localIP());
-    Serial.print("Server: ");
-    Serial.println(SERVER_BASE);
-    testServerConnection();
+    backendDiscoveryUdpStarted = backendDiscoveryUdp.begin(BACKEND_DISCOVERY_LOCAL_PORT) == 1;
+    if (discoverBackend(2500)) {
+      testServerConnection();
+    }
   } else {
     Serial.println("WiFi connect timeout. Will retry.");
   }
 }
 
+IPAddress subnetBroadcastAddress() {
+  const IPAddress localIp = WiFi.localIP();
+  const IPAddress subnetMask = WiFi.subnetMask();
+  return IPAddress(
+    localIp[0] | static_cast<uint8_t>(~subnetMask[0]),
+    localIp[1] | static_cast<uint8_t>(~subnetMask[1]),
+    localIp[2] | static_cast<uint8_t>(~subnetMask[2]),
+    localIp[3] | static_cast<uint8_t>(~subnetMask[3])
+  );
+}
+
+void invalidateBackend() {
+  backendDiscovered = false;
+  backendServerBase = "";
+}
+
+bool discoverBackend(unsigned long timeoutMs) {
+  if (WiFi.status() != WL_CONNECTED) return false;
+  if (!backendDiscoveryUdpStarted) {
+    backendDiscoveryUdpStarted = backendDiscoveryUdp.begin(BACKEND_DISCOVERY_LOCAL_PORT) == 1;
+  }
+  if (!backendDiscoveryUdpStarted) {
+    Serial.println("Backend discovery UDP start failed.");
+    return false;
+  }
+
+  lastBackendDiscoveryAttemptMs = millis();
+  const IPAddress broadcastIp = subnetBroadcastAddress();
+  backendDiscoveryUdp.beginPacket(broadcastIp, BACKEND_DISCOVERY_PORT);
+  backendDiscoveryUdp.print(BACKEND_DISCOVERY_REQUEST);
+  backendDiscoveryUdp.print("|");
+  backendDiscoveryUdp.print(DEVICE_ID);
+  backendDiscoveryUdp.endPacket();
+
+  Serial.print("Discovering backend via UDP ");
+  Serial.print(broadcastIp);
+  Serial.print(":");
+  Serial.println(BACKEND_DISCOVERY_PORT);
+
+  const unsigned long startedAt = millis();
+  while (millis() - startedAt < timeoutMs) {
+    const int packetSize = backendDiscoveryUdp.parsePacket();
+    if (packetSize > 0) {
+      const IPAddress responseIp = backendDiscoveryUdp.remoteIP();
+      char responseBuffer[64];
+      const int bytesRead = backendDiscoveryUdp.read(responseBuffer, sizeof(responseBuffer) - 1);
+      if (bytesRead <= 0) continue;
+      responseBuffer[bytesRead] = '\0';
+      const String response(responseBuffer);
+      const String prefix(BACKEND_DISCOVERY_RESPONSE_PREFIX);
+      if (!response.startsWith(prefix)) continue;
+
+      const long advertisedPort = response.substring(prefix.length()).toInt();
+      if (advertisedPort <= 0 || advertisedPort > 65535) continue;
+      backendServerIp = responseIp;
+      backendServerPort = static_cast<uint16_t>(advertisedPort);
+      backendServerBase = "http://" + backendServerIp.toString() + ":" + String(backendServerPort);
+      backendDiscovered = true;
+      Serial.print("Backend discovered: ");
+      Serial.println(backendServerBase);
+      return true;
+    }
+    delay(20);
+  }
+
+  Serial.println("Backend discovery timed out; will retry.");
+  return false;
+}
+
+bool ensureBackendDiscovered() {
+  if (WiFi.status() != WL_CONNECTED) return false;
+  if (backendDiscovered) return true;
+  if (millis() - lastBackendDiscoveryAttemptMs < BACKEND_DISCOVERY_RETRY_INTERVAL_MS) return false;
+  return discoverBackend(1200);
+}
+
 void testServerConnection() {
+  if (!backendDiscovered) return;
   WiFiClient client;
   Serial.print("TCP test ");
-  Serial.print(SERVER_HOST);
+  Serial.print(backendServerIp);
   Serial.print(":");
-  Serial.print(SERVER_PORT);
+  Serial.print(backendServerPort);
   Serial.print(" -> ");
 
-  if (client.connect(SERVER_HOST, SERVER_PORT, 2500)) {
+  if (client.connect(backendServerIp, backendServerPort, 2500)) {
     Serial.println("connected");
     client.stop();
   } else {
     Serial.println("failed");
+    invalidateBackend();
   }
 }
 
 void maintainWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
+    if (!wifiPreviouslyConnected) {
+      wifiPreviouslyConnected = true;
+      invalidateBackend();
+      backendDiscoveryUdpStarted = backendDiscoveryUdp.begin(BACKEND_DISCOVERY_LOCAL_PORT) == 1;
+    }
+    ensureBackendDiscovered();
     return;
+  }
+
+  if (wifiPreviouslyConnected) {
+    wifiPreviouslyConnected = false;
+    invalidateBackend();
+    backendDiscoveryUdp.stop();
+    backendDiscoveryUdpStarted = false;
   }
 
   const unsigned long now = millis();
@@ -363,13 +474,14 @@ void maintainWiFi() {
 }
 
 void pollCommands() {
-  if (WiFi.status() != WL_CONNECTED) {
+  if (!ensureBackendDiscovered()) {
     return;
   }
 
   HTTPClient http;
   http.setTimeout(650);
-  http.begin(String(SERVER_BASE) + "/api/propulsion/commands?device_id=" + DEVICE_ID);
+  http.begin(backendServerBase + "/api/propulsion/commands?device_id=" + DEVICE_ID);
+  http.addHeader("X-UISYS-Token", UISYS_API_TOKEN);
   const int code = http.GET();
 
   if (code == 200) {
@@ -387,6 +499,7 @@ void pollCommands() {
       Serial.print(")");
     }
     Serial.println();
+    if (code < 0) invalidateBackend();
   }
 
   http.end();
@@ -553,7 +666,7 @@ void applyMotorOutput() {
 }
 
 void reportStatus() {
-  if (WiFi.status() != WL_CONNECTED) {
+  if (!ensureBackendDiscovered()) {
     return;
   }
 
@@ -571,10 +684,12 @@ void reportStatus() {
 
   HTTPClient http;
   http.setTimeout(650);
-  http.begin(String(SERVER_BASE) + "/api/propulsion/status");
+  http.begin(backendServerBase + "/api/propulsion/status");
+  http.addHeader("X-UISYS-Token", UISYS_API_TOKEN);
   http.addHeader("Content-Type", "application/json");
   const int code = http.POST(body);
   http.end();
+  if (code < 0) invalidateBackend();
 
   Serial.print("Status L/R=");
   Serial.print(currentLeftPower);

@@ -5,6 +5,7 @@ $RootPath = (Resolve-Path -LiteralPath $ProjectRoot).Path
 
 $Targets = @(
     "apps\frontend\.next",
+    "apps\frontend\.next-dev",
     "apps\backend\dist",
     "packages\shared\dist",
     "apps\frontend\tsconfig.typecheck.tsbuildinfo"

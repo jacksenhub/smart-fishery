@@ -1,6 +1,5 @@
-import { LogsPage } from "@/components/dashboard/DashboardPages";
+import { LogsPage } from "@/components/dashboard/LogsPage";
 
 export default function LogsPageRoute() {
   return <LogsPage />;
 }
-

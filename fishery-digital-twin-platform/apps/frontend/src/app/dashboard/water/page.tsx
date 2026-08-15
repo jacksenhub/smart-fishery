@@ -1,6 +1,5 @@
-import { WaterPage } from "@/components/dashboard/DashboardPages";
+import { WaterPage } from "@/components/dashboard/WaterPage";
 
 export default function WaterMonitoringPage() {
   return <WaterPage />;
 }
-
