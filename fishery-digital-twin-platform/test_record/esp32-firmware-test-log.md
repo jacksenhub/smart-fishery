@@ -1,10 +1,10 @@
 # ESP32 船载控制固件联调测试记录
 
-记录日期：2026-10-24
+记录日期：2026-08-24
 
 测试对象：MAKER-ESP32-PRO，board 01
 
-固件版本：`2026-08-03-board1-responsive-gimbal-tracking`
+固件版本：`2026-07-03-board1-responsive-gimbal-tracking`
 
 串口波特率：115200
 
