@@ -1,0 +1,20 @@
+测试类型：复现捕获日志
+记录来源：Arduino 串口监视器
+场景：空载基线，周期状态上报
+硬件：MAKER-ESP32-PRO，board 01
+外设状态：未连接电机、舵机和 GPS，ESP32 仅由 USB 供电
+固件版本：2026-08-03-board1-responsive-gimbal-tracking
+捕获日期：2026-10-24
+串口波特率：115200
+说明：验证 ESP32 启动、Wi-Fi 与后端连接、同板多逻辑设备状态上报及 GPS 离线检测
+--------------------------------------------------------------------------
+19:31:27.117 -> maker-esp32-pro-dc-01 M0=0%, POST /api/propulsion/status -> 201
+19:31:27.384 -> Status [90, 90, 90, 90], POST /api/servos/status -> 201
+19:31:27.853 -> maker-esp32-pro-linear-02 M1=0%, M2=0%, POST /api/propulsion/status -> 201
+19:31:28.520 -> [GPS] serial=offline, bytes=0, chars=0, fix=waiting, check 5V/GND/GPS-TX->GPIO33
+19:31:28.661 -> POST /api/gps/status -> 201
+19:31:28.973 -> maker-esp32-pro-dc-01 M0=0%, POST /api/propulsion/status -> 201
+19:31:29.486 -> Status [90, 90, 90, 90], POST /api/servos/status -> 201
+19:31:29.721 -> maker-esp32-pro-linear-02 M1=0%, M2=0%, POST /api/propulsion/status -> 201
+19:31:30.365 -> maker-esp32-pro-dc-01 M0=0%, POST /api/propulsion/status -> 201
+19:31:30.494 -> [GPS] serial=offline, bytes=0, chars=0, fix=waiting, check 5V/GND/GPS-TX->GPIO33

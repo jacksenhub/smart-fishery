@@ -24,7 +24,7 @@ ESP32Servo
 TinyGPSPlus
 ```
 
-开发板使用 ESP32 Arduino Core 3.x，当前电脑已安装 `3.3.10`。
+开发板使用 ESP32 Arduino Core `3.3.11`。
 
 ## 引脚和接线
 

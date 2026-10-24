@@ -30,7 +30,7 @@ right_power
 
 ## 引脚配置
 
-当前固件已经按 FOC_ESP32_X2(303FOCESP21) 原理图和你提供的信息配置：
+当前固件按 FOC_ESP32_X2(303FOCESP21) 参考设计配置如下：
 
 ```text
 左电机：
@@ -44,7 +44,7 @@ V = GPIO27
 W = GPIO14
 ```
 
-你没有提供独立 EN 引脚，因此固件按 3PWM 模式创建驱动器：
+该板参考设计未引出独立 EN 引脚，因此固件按 3PWM 模式创建驱动器：
 
 ```cpp
 BLDCDriver3PWM leftDriver = BLDCDriver3PWM(LEFT_PWM_U, LEFT_PWM_V, LEFT_PWM_W);
@@ -88,7 +88,7 @@ B 相电流采样 = GPIO36
 #define USE_CURRENT_SENSE 0
 ```
 
-如果确认 INA240 具体型号后，可以修改增益：
+启用电流采样前，需要根据实物确认 INA240 型号并设置对应增益：
 
 ```cpp
 const float INA240_GAIN = 20.0f;
@@ -132,7 +132,7 @@ SDA = GPIO13
 #define USE_CLOSED_LOOP_VELOCITY 0
 ```
 
-如果后续安装 AS5600 磁编码器，可以打开：
+安装 AS5600 磁编码器并完成接线后，可以启用：
 
 ```cpp
 #define USE_I2C_ENCODERS 1
@@ -143,7 +143,7 @@ SDA = GPIO13
 
 ## 电机参数
 
-还需要确认无刷电机极对数：
+无刷电机极对数需要根据所用电机的参数确定：
 
 ```cpp
 const int LEFT_POLE_PAIRS = 7;
@@ -152,7 +152,7 @@ const int RIGHT_POLE_PAIRS = 7;
 
 如果极对数不对，电机可能抖动、发热或无法稳定转动。
 
-目前仍需你补充：
+启用输出前需要确认以下参数：
 
 ```text
 电机型号

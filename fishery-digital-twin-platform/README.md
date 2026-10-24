@@ -8,10 +8,18 @@
 - 系统总览：展示平台状态和核心监测数据。
 - 三维孪生：展示船模姿态、任务状态和演示级控制反馈。
 - 环境监测：展示水温、浊度、pH、溶解氧、氨氮、电导率，并集成 AI 预测报告。
-- 水上执行机构：控制两块 MAKER-ESP32-PRO 舵机板，共 8 路舵机。
+- 水上执行机构：控制两块 MAKER-ESP32-PRO 舵机板，共 7 路可用舵机。
 - 航线规划：优先展示真实 WGS84 GPS 定位；无定位时明确标记参考航线，并支持离线底图。
 - 设备健康：展示电池、电控、通信和传感器状态，异常时红色预警。
 - 操作日志：记录后端、传感器、AI 和控制事件。
+
+## 数据来源
+
+- ESP32、Wi-Fi、后端通信、舵机、电机、推杆和 GPS 构成真实硬件控制链路。
+- 水质页面支持真实传感器数据、独立演示数据和离线占位数据，界面会显示当前来源。
+- 三维船模用于系统可视化，控制反馈以页面标注的数据来源为准。
+- 未配置 DeepSeek 密钥时，AI 分析使用本地基线逻辑生成参考结果。
+- SimpleFOC 无刷推进固件默认关闭输出，当前作为扩展模块保留。
 
 ## 目录结构
 
@@ -102,7 +110,7 @@ npm run firmware:check
 
 该流程使用已验证版本：ESP32 Arduino Core 3.3.11、ESP32Servo 3.2.1、TinyGPSPlus 1.0.3、Simple FOC 2.4.0。
 
-### 第一块舵机板：servo1 + 温度传感器
+### 第一块控制板：舵机、GPS、直流电机与双推杆
 
 ```text
 firmware/esp32/maker_esp32_pro_servo_temp_01/maker_esp32_pro_servo_temp_01.ino
@@ -204,4 +212,6 @@ npm run build
 npm audit --omit=dev
 ```
 
-本次系统审查与修复记录见 `docs/code-review-2026-08-08.md`。
+构建验证和版本记录见 `docs/validation-and-release-notes.md`。
+
+串口联调记录与日志解读见 `test_record/README.md`。
